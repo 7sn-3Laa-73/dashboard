@@ -3,7 +3,7 @@ import plotly.express as px
 import streamlit as st
 
 # تحميل البيانات
-df = pd.read_csv("D:/Task_Data_V/USA_cars_datasets.csv")
+df = pd.read_csv("USA_cars_datasets.csv")
 
 st.set_page_config(page_title="Cars Market Dashboard", layout="wide")
 st.title("🚗 Cars Market Analysis Dashboard")
