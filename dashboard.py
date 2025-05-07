@@ -1,111 +1,92 @@
 import pandas as pd
-import streamlit as st
-import seaborn as sns
 import plotly.express as px
-import plotly.graph_objects as go
+import streamlit as st
 
-df = pd.read_csv("USA_cars_datasets.csv")
+# تحميل البيانات
+df = pd.read_csv("D:/Task_Data_V/USA_cars_datasets.csv")
 
+st.set_page_config(page_title="Cars Market Dashboard", layout="wide")
+st.title("🚗 Cars Market Analysis Dashboard")
+st.markdown("This dashboard allows you to interact with car market data including car prices, mileage, and more.")
 
-st.set_page_config(page_title="Cars Market Dashboard", page_icon="🚗", layout="wide")
+# Sidebar filters
+st.sidebar.header("🔍 Filter Options")
 
+# Brand filter
+brands = sorted(df["brand"].unique())
+selected_brand = st.sidebar.selectbox("Select Car Brand:", brands)
 
-st.title("🚗 **Cars Market Analysis Dashboard**")
-st.markdown("""
-    This dashboard allows you to interact with car market data including car prices, mileage, and more.
-    Use the filters on the sidebar to analyze the data in more detail.
-""")
+# Year range filter
+min_year = int(df["year"].min())
+max_year = int(df["year"].max())
+year_range = st.sidebar.slider("Select Year Range:", min_year, max_year, (min_year, max_year))
 
-st.sidebar.header("**Filter Data**")
-brand_filter = st.sidebar.selectbox("Select Car Brand", options=df['brand'].unique())
-year_filter = st.sidebar.slider("Select Year Range", min_value=int(df['year'].min()), max_value=int(df['year'].max()), value=(int(df['year'].min()), int(df['year'].max())))
-price_filter = st.sidebar.slider("Select Price Range", min_value=int(df['price'].min()), max_value=int(df['price'].max()), value=(int(df['price'].min()), int(df['price'].max())))
+# Price range filter
+min_price = int(df["price"].min())
+max_price = int(df["price"].max())
+price_range = st.sidebar.slider("Select Price Range ($):", min_price, max_price, (min_price, max_price), step=1000)
 
-filtered_df = df[(df['brand'] == brand_filter) & 
-                 (df['year'].between(year_filter[0], year_filter[1])) & 
-                 (df['price'].between(price_filter[0], price_filter[1]))]
+# تصفية البيانات
+filtered_df = df[
+    (df["brand"] == selected_brand) &
+    (df["year"].between(year_range[0], year_range[1])) &
+    (df["price"].between(price_range[0], price_range[1]))
+]
 
-st.subheader("Data Overview")
-st.write(f"Displaying {filtered_df.shape[0]} records.")
-st.dataframe(filtered_df.head(), use_container_width=True)
+st.markdown(f"### 📊 Displaying {filtered_df.shape[0]} records for brand: **{selected_brand}**")
 
-st.subheader(f"Average Car Prices by Model ({brand_filter})")
-brand_model_price_avg = filtered_df[filtered_df['brand'] == brand_filter].groupby('model')['price'].mean().sort_values(ascending=False)
-fig1 = px.bar(brand_model_price_avg, 
-              x=brand_model_price_avg.index, 
-              y=brand_model_price_avg.values, 
-              labels={'x': 'Car Model', 'y': 'Average Price ($)'}, 
-              title=f"Average Price by Model for {brand_filter}", 
-              color=brand_model_price_avg.values, 
-              color_continuous_scale='Viridis')
+# عرض الجدول
+st.dataframe(filtered_df.head(10), use_container_width=True)
+
+# رسم 1: متوسط السعر حسب الحالة
+st.subheader("Average Price by Condition")
+avg_price_condition = filtered_df.groupby("condition")["price"].mean().sort_values()
+fig1 = px.bar(avg_price_condition,
+              x=avg_price_condition.index,
+              y=avg_price_condition.values,
+              labels={"x": "Condition", "y": "Average Price ($)"},
+              color=avg_price_condition.values,
+              color_continuous_scale="Blues")
 st.plotly_chart(fig1, use_container_width=True)
 
-
-st.subheader("Price Distribution by Year")
-fig2 = px.box(filtered_df, 
-              x="year", 
-              y="price", 
-              title="Price Distribution by Year", 
-              labels={"year": "Car Year", "price": "Price ($)"}, 
-              color="year")  
+# رسم 2: عدد السيارات حسب الموديل
+st.subheader("Top 10 Models by Count")
+model_count = filtered_df["model"].value_counts().nlargest(10)
+fig2 = px.bar(x=model_count.index, y=model_count.values,
+              labels={"x": "Model", "y": "Number of Cars"},
+              title="Top 10 Models",
+              color=model_count.values,
+              color_continuous_scale="Purples")
 st.plotly_chart(fig2, use_container_width=True)
 
+# رسم 3: السعر مقابل الأميال
 st.subheader("Price vs Mileage")
-fig3 = px.scatter(filtered_df, 
-                  x="mileage", 
-                  y="price", 
-                  color="condition", 
-                  title="Price vs Mileage", 
-                  labels={"mileage": "Mileage (in miles)", "price": "Price ($)"}, 
-                  hover_data=['brand', 'year'], 
-                  color_continuous_scale='RdBu')
+fig3 = px.scatter(filtered_df, x="mileage", y="price",
+                  title="Price vs Mileage",
+                  labels={"mileage": "Mileage", "price": "Price ($)"},
+                  opacity=0.6)
 st.plotly_chart(fig3, use_container_width=True)
 
-
-st.subheader("Price Comparison by Condition")
-
-fig4 = px.violin(filtered_df, 
-                 y="price", 
-                 x="condition", 
-                 box=True, 
-                 points="all", 
-                 title="Price Comparison by Condition",
-                 labels={"condition": "Car Condition", "price": "Price ($)"}, 
-                 color="condition", 
-                 color_discrete_sequence=["#FF6347", "#FFD700", "#90EE90"])
-
-fig4.update_traces(meanline_visible=True, showlegend=False)
-
-fig4.update_layout(title="Price Comparison by Condition with Additional Insights", 
-                  xaxis_title="Condition of the Car", 
-                  yaxis_title="Price ($)", 
-                  template="plotly_dark")
-
+# رسم 4: توزيع الأسعار
+st.subheader("Price Distribution")
+fig4 = px.histogram(filtered_df, x="price",
+                    nbins=30,
+                    labels={"price": "Price ($)"},
+                    title="Price Distribution",
+                    color_discrete_sequence=["#4C78A8"])
 st.plotly_chart(fig4, use_container_width=True)
 
-
-
-st.subheader("Price vs Year")
-fig = px.scatter(filtered_df, 
-                 x="year", 
-                 y="price", 
-                 title="Price vs Year", 
-                 labels={"year": "Car Year", "price": "Price ($)"}, 
-                 color="year", 
-                 color_continuous_scale='Viridis')
-st.plotly_chart(fig, use_container_width=True)
-
-
+# Insights
+st.markdown("### 🔎 Key Insights")
 st.markdown("""
-    **Key Insights:**
-    - **Top Brands**: Brands like Tesla and BMW tend to have higher average prices.
-    - **Price Trends**: Older cars typically have a lower price, while new models hold better value.
-    - **Mileage Impact**: Higher mileage cars tend to have a lower price.
-    - **Condition**: Cars in good condition generally sell for more money, even with higher mileage.
+- **Top Brands**: Brands like Tesla and BMW tend to have higher average prices.
+- **Price Trends**: Older cars typically have a lower price.
+- **Mileage Impact**: Higher mileage cars tend to have lower prices.
+- **Condition**: Cars in good condition usually sell for more.
 """)
 
-st.subheader("Additional Insights and Suggestions")
+st.markdown("### 💡 Suggestions")
 st.markdown("""
-    - You can use this dashboard to better understand the car market trends.
-    - Experiment with filters to find the best deals for specific car brands, years, and price ranges.
+- Use filters to explore the best deals.
+- Compare models and prices within each brand.
 """)
