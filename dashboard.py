@@ -3,7 +3,7 @@ import plotly.express as px
 import streamlit as st
 
 # تحميل البيانات
-df = pd.read_csv("USA_cars_datasets.csv")
+df = pd.read_csv("D:/Task_Data_V/USA_cars_datasets.csv")
 
 st.set_page_config(page_title="Cars Market Dashboard", layout="wide")
 st.title("🚗 Cars Market Analysis Dashboard")
@@ -39,14 +39,18 @@ st.markdown(f"### 📊 Displaying {filtered_df.shape[0]} records for brand: **{s
 st.dataframe(filtered_df.head(10), use_container_width=True)
 
 # رسم 1: متوسط السعر حسب الحالة
+# رسم 1: متوسط السعر حسب الحالة (عرضي)
 st.subheader("Average Price by Condition")
 avg_price_condition = filtered_df.groupby("condition")["price"].mean().sort_values()
 fig1 = px.bar(avg_price_condition,
-              x=avg_price_condition.index,
-              y=avg_price_condition.values,
-              labels={"x": "Condition", "y": "Average Price ($)"},
+              y=avg_price_condition.index,  # الحالة على المحور Y (الرأسي)
+              x=avg_price_condition.values,  # السعر على المحور X (الأفقي)
+              orientation='h',  # تحديد الرسم العرضي
+              labels={"x": "Average Price ($)", "y": "Condition"},
               color=avg_price_condition.values,
-              color_continuous_scale="Blues")
+              color_continuous_scale="Blues",
+              height=700
+              )
 st.plotly_chart(fig1, use_container_width=True)
 
 # رسم 2: عدد السيارات حسب الموديل
@@ -68,13 +72,22 @@ fig3 = px.scatter(filtered_df, x="mileage", y="price",
 st.plotly_chart(fig3, use_container_width=True)
 
 # رسم 4: توزيع الأسعار
-st.subheader("Price Distribution")
-fig4 = px.histogram(filtered_df, x="price",
-                    nbins=30,
-                    labels={"price": "Price ($)"},
-                    title="Price Distribution",
-                    color_discrete_sequence=["#4C78A8"])
-st.plotly_chart(fig4, use_container_width=True)
+#st.subheader("Price Distribution")
+#fig4 = px.histogram(filtered_df, x="price",
+#                    nbins=30,
+#                   labels={"price": "Price ($)"},
+#                   title="Price Distribution",
+#                   color_discrete_sequence=["#4C78A8"])
+#st.plotly_chart(fig4, use_container_width=True)
+
+# رسم 5: توزيع الحالات (Pie Chart)
+st.subheader("Condition Distribution")
+condition_counts = filtered_df["condition"].value_counts()
+fig5 = px.pie(names=condition_counts.index,
+              values=condition_counts.values,
+              title="Car Condition Distribution",
+              color_discrete_sequence=px.colors.sequential.RdBu)
+st.plotly_chart(fig5, use_container_width=True)
 
 # Insights
 st.markdown("### 🔎 Key Insights")
